@@ -19,12 +19,16 @@ jobs:
     - name: Set up .NET
       uses: actions/setup-dotnet@v2
       with:
-        dotnet-version: '4.8.x'
+        dotnet-version: '6.0.x'  # This will set up the latest .NET Core/.NET version, not the .NET Framework
+
+    - name: Install Chocolatey
+      run: |
+        Set-ExecutionPolicy Bypass -Scope Process -Force; `
+        [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; `
+        iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
 
     - name: Install .NET Framework 4.8 Developer Pack
-      run: |
-        choco install dotnet4.8
-        choco install netfx-4.8-devpack
+      run: choco install netfx-4.8-devpack -y
       shell: powershell
 
     - name: Restore dependencies
