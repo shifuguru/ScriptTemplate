@@ -32,7 +32,7 @@ namespace ScriptTemplate
         // Basic Toggles to get you started: 
         public static bool modEnabled = true;
         public static bool debugEnabled = true;
-
+        public static string log = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "ScriptTemplate", "ScriptTemplate.log");
         // Reference to Script Settings file: 
         public static ScriptSettings settings;
 
@@ -46,82 +46,146 @@ namespace ScriptTemplate
         // Create basic Menu items: 
         private static readonly ObjectPool pool = new ObjectPool();
         private static readonly NativeMenu menu = new NativeMenu($"{modName}", $"{modVer}", " ");
-        private static readonly NativeCheckboxItem ModToggleMenuItem = new NativeCheckboxItem("Mod Enabled: ", "Enables/Disables the Mod.", modEnabled);
-        private static readonly NativeCheckboxItem DebugToggleMenuItem = new NativeCheckboxItem("Debug Enabled: ", "Enables Debug Notifications. Recommended: False", debugEnabled);
+        private static readonly NativeCheckboxItem ModEnabledToggleMenuItem = new NativeCheckboxItem("Mod Enabled: ", "Enables/Disables the Mod.", modEnabled);
+        private static readonly NativeCheckboxItem DebugEnabledToggleMenuItem = new NativeCheckboxItem("Debug Enabled: ", "Enables Debug Notifications. Recommended: False", debugEnabled);
 
         public Main()
         {
-            LoadSettings();
-            LoadMenuItems();
-            LoadiFruitAddon();
-            SaveSettings();
+            try
+            {
+                LoadSettings();
+                LoadMenuItems();
+                LoadiFruitAddon();
+                SaveSettings();
 
-            Tick += OnTick;
-            KeyDown += OnKeyDown;
-            Aborted += OnAborted;
-            Interval = 10;
+                Tick += OnTick;
+                KeyDown += OnKeyDown;
+                Aborted += OnAborted;
+                Interval = 10;
+            }
+            catch (Exception ex)
+            {
+                LogException("Main", ex);
+            }
         }
 
         public static void LoadSettings()
         {
+            try
+            {
+                settings = ScriptSettings.Load("scripts\\ScriptTemplate.ini");
 
+                modToggleKey = settings.GetValue<Keys>("Controls", "Menu Toggle Key", modToggleKey);
+                menuControl = settings.GetValue<Control>("Controls", "Menu Control", menuControl);
+                modEnabled = settings.GetValue<bool>("Options", "Mod Enabled", modEnabled);
+                debugEnabled = settings.GetValue<bool>("Options", "Debug Enabled", debugEnabled);
+
+                SaveSettings();
+            }
+            catch (Exception ex)
+            {
+                LogException("LoadSettings", ex);
+            }
         }
         public static void SaveSettings()
         {
+            try
+            {
+                settings = ScriptSettings.Load("scripts\\ScriptTemplate.ini");
 
+                settings.SetValue<Keys>("Controls", "Menu Toggle Key", modToggleKey);
+                settings.SetValue<Control>("Controls", "Menu Control", menuControl);
+                settings.SetValue<bool>("Options", "Mod Enabled", modEnabled);
+                settings.SetValue<bool>("Options", "Debug Enabled", debugEnabled);
+                settings.Save();
+            }
+            catch (Exception ex)
+            {
+                LogException("SaveSettings", ex);
+            }
         }
 
         private void LoadMenuItems()
         {
-            // INITIALISE ITEMS FOR MOD MENU 
-            pool.Add(menu);
+            try
+            {
+                // INITIALISE ITEMS FOR LEMONUI MENU: 
+                pool.Add(menu);
+                menu.Add(ModEnabledToggleMenuItem);
+                menu.Add(DebugEnabledToggleMenuItem);
+                // Create Methods: 
+                ModEnabledToggleMenuItem.Activated += ToggleModEnabled;
+                DebugEnabledToggleMenuItem.Activated += ToggleDebugEnabled;
+                // Set Variables: 
+                ModEnabledToggleMenuItem.Checked = modEnabled;
+                DebugEnabledToggleMenuItem.Checked = debugEnabled;
+            }
+            catch (Exception ex)
+            {
+                LogException("LoadMenuItems", ex);
+            }
         }
 
         private void LoadiFruitAddon()
         {
-            // Custom phone creation
-            _iFruit = new CustomiFruit();
-            /*
-            _iFruit.CenterButtonColor = System.Drawing.Color.Orange;
-            _iFruit.LeftButtonColor = System.Drawing.Color.LimeGreen;
-            _iFruit.RightButtonColor = System.Drawing.Color.Purple;
-            _iFruit.CenterButtonIcon = SoftKeyIcon.Fire;
-            _iFruit.LeftButtonIcon = SoftKeyIcon.Police;
-            _iFruit.RightButtonIcon = SoftKeyIcon.Website;
-            */
-            iFruitContact contactVHUD = new iFruitContact("Vanishing HUD");
-            contactVHUD.Answered += ContactAnswered;   // Linking the Answered event with our function
-            contactVHUD.DialTimeout = 3000;            // Delay before answering
-            contactVHUD.Active = true;                 // true = the contact is available and will answer the phone
-            contactVHUD.Icon = ContactIcon.Blank;      // Contact's icon
-            _iFruit.Contacts.Add(contactVHUD);         // Add the contact to the phone
+            try
+            {
+                // Custom phone creation
+                _iFruit = new CustomiFruit();
+                /*
+                _iFruit.CenterButtonColor = System.Drawing.Color.Orange;
+                _iFruit.LeftButtonColor = System.Drawing.Color.LimeGreen;
+                _iFruit.RightButtonColor = System.Drawing.Color.Purple;
+                _iFruit.CenterButtonIcon = SoftKeyIcon.Fire;
+                _iFruit.LeftButtonIcon = SoftKeyIcon.Police;
+                _iFruit.RightButtonIcon = SoftKeyIcon.Website;
+                */
+                iFruitContact contactVHUD = new iFruitContact("Vanishing HUD");
+                contactVHUD.Answered += ContactAnswered;   // Linking the Answered event with our function
+                contactVHUD.DialTimeout = 3000;            // Delay before answering
+                contactVHUD.Active = true;                 // true = the contact is available and will answer the phone
+                contactVHUD.Icon = ContactIcon.Blank;      // Contact's icon
+                _iFruit.Contacts.Add(contactVHUD);         // Add the contact to the phone
+            }
+            catch (Exception ex)
+            {
+                LogException("LoadiFruitAddon", ex);
+            }
         }
 
         private void ContactAnswered(iFruitContact contact)
         {
-            // The contact has answered: 
-            if (debugEnabled)
+            try
             {
-                Notification.Show("Vanishing HUD Menu Opened");
-            }
+                // The contact has answered: 
+                if (debugEnabled)
+                {
+                    Notification.Show("Vanishing HUD Menu Opened");
+                }
 
-            if (!menu.Visible)
+                if (!menu.Visible)
+                {
+                    ToggleMenu();
+                }
+
+                // We need to close the phone as the contact picks up by calling _iFruit.Close()
+                // Here, we will close the phone in 0 seconds (0ms). 
+                _iFruit.Close();
+            }
+            catch (Exception ex)
             {
-                ToggleMenu();
+                LogException("ContactAnswered", ex);
             }
-
-            // We need to close the phone as the contact picks up by calling _iFruit.Close()
-            // Here, we will close the phone in 0 seconds (0ms). 
-            _iFruit.Close();
         }
 
-
-        private void ToggleMod()
+        public static void ToggleModEnabled(object sender, EventArgs e)
         {
-            modEnabled = !modEnabled;
-
-            if (debugEnabled)
+            try
             {
+                modEnabled = !modEnabled;
+                ModEnabledToggleMenuItem.Checked = modEnabled;
+                SaveSettings();
+
                 if (modEnabled)
                 {
                     Notification.Show("Mod ~g~Enabled~s~.");
@@ -131,48 +195,120 @@ namespace ScriptTemplate
                     Notification.Show("Mod ~r~Disabled~s~.");
                 }
             }
+            catch (Exception ex)
+            {
+                LogException("ToggleModEnabled", ex);
+            }
+        }
+
+        public static void ToggleDebugEnabled(object sender, EventArgs e)
+        {
+            try
+            {
+                debugEnabled = !debugEnabled;
+                DebugEnabledToggleMenuItem.Checked = debugEnabled;
+                SaveSettings();
+
+                if (debugEnabled)
+                {
+                    Notification.Show("Debug ~g~Enabled~s~.");
+                }
+                else
+                {
+                    Notification.Show("Debug ~r~Disabled~s~.");
+                }
+            }
+            catch (Exception ex)
+            {
+                LogException("ToggleDebugEnabled", ex);
+            }            
         }
 
         private void ToggleMenu()
         {
-            menu.Visible = !menu.Visible;
+            try
+            {
+                menu.Visible = !menu.Visible;
+            }
+            catch (Exception ex)
+            {
+                LogException("ToggleMenu", ex);
+            }            
         }
 
 
         private void OnTick(object sender, EventArgs e)
         {
-            _iFruit.Update();
-            pool.Process();
+            try
+            {
+                _iFruit.Update();
+                pool.Process();
 
-            // .. 
+                // .. 
+            }
+            catch (Exception ex)
+            {
+                LogException("OnTick", ex);
+            }            
         }
 
         private void OnKeyDown(object sender, KeyEventArgs e)
         {
-            // Use this method if you just want a Keyboard action, i.e. Enabling/Disabling the Script.
-            // Be aware that this method also fires repeatedly while the Key is held down. 
-            // I advise avoiding this method, or using it sparingly. 
+            try
+            {
+                // Use this method if you just want a Keyboard action, i.e. Enabling/Disabling the Script.
+                // Be aware that this method also fires repeatedly while the Key is held down. 
+                // I advise avoiding this method, or using it sparingly. 
+            }
+            catch (Exception ex)
+            {
+                LogException("OnKeyDown", ex);
+            }
         }
 
         private void OnKeyUp(object sender, KeyEventArgs e)
-        {
-            // Use this method for keyboard events.
-            // i.e. toggling a setting from the Keyboard. 
-            // Personally, I use LemonMenu to toggle my scripts. 
-
-            // Simple toggle switch: 
-            if (e.KeyCode == modToggleKey)
+        { 
+            try
             {
-                ToggleMod();
+                // Use this method for keyboard events.
+                // i.e. toggling a setting from the Keyboard. 
+                // Personally, I use LemonMenu to toggle my scripts.
+
+                // Simple toggle switch: 
+                if (e.KeyCode == modToggleKey)
+                {
+                    ToggleModEnabled(sender, e);
+                }
             }
-            
+            catch (Exception ex)
+            {
+                LogException("OnKeyUp", ex);
+            }
         }
 
         private void OnAborted(object sender, EventArgs e)
         {
-
+            try
+            {
+                
+            }
+            catch (Exception ex)
+            {
+                LogException("OnAborted", ex);
+            }
         }
 
-
+        public static void LogException(string methodName, Exception ex)
+        {
+            try
+            {
+                string message = $"[{DateTime.Now}] Error in {methodName} method. Exception: {ex.Message}";
+                File.AppendAllText(log, $"{message}{Environment.NewLine}");
+            }
+            catch (Exception ex0)
+            {
+                Console.WriteLine($"Failed to log exception: {ex0.Message}");
+            }
+        }
     }
 }
