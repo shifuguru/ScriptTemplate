@@ -1,4 +1,4 @@
-name: Build and Test
+name: .NET Framework Build and Test
 
 on:
   push:
@@ -13,23 +13,23 @@ jobs:
     runs-on: windows-latest
 
     steps:
-    - name: Checkout repository
+    - name: Checkout code
       uses: actions/checkout@v2
 
-    - name: Set up .NET
-      uses: actions/setup-dotnet@v2
-      with:
-        dotnet-version: '6.0.x'  # This will set up the latest .NET Core/.NET version, not the .NET Framework
-
-    - name: Install Chocolatey
+    - name: Install Chocolatey and .NET Framework 4.8 Developer Pack
       run: |
         Set-ExecutionPolicy Bypass -Scope Process -Force; `
         [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; `
         iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
 
-    - name: Install .NET Framework 4.8 Developer Pack
-      run: choco install netfx-4.8-devpack -y
+        choco install netfx-4.8-devpack -y
       shell: powershell
+
+    - name: Setup .NET Framework Environment
+      run: |
+        dotnet --list-sdks
+        dotnet --list-targets
+      shell: pwsh
 
     - name: Restore dependencies
       run: dotnet restore
@@ -38,4 +38,4 @@ jobs:
       run: dotnet build --no-restore
 
     - name: Run tests
-      run: dotnet test --no-restore --verbosity normal
+      run: dotnet test --no-build --verbosity normal
